@@ -1336,6 +1336,7 @@ frontend_path = Path(__file__).parent / "frontend" / "build"
 if frontend_path.exists():
     app.mount("/", StaticFiles(directory=str(frontend_path), html=True), name="static")
 
+
 @app.get("/api/hello")
 async def hello_world():
     return {"message": "Hello from FastAPI!"}
