@@ -669,6 +669,472 @@ async def get_verification_results() -> Dict[int, Dict[str, Any]]:
 from urllib.parse import urljoin
 import re
 
+# --- IMAGE VERIFICATION ENDPOINTS FOR GUIDELINES 32-38 ---
+from urllib.parse import urlparse
+
+def get_images_from_html(html, base_url):
+    soup = BeautifulSoup(html, 'html.parser')
+    images = []
+    for img in soup.find_all('img'):
+        src = img.get('src')
+        alt = img.get('alt', '')
+        if src:
+            img_url = urljoin(base_url, src)
+            images.append({'src': img_url, 'alt': alt})
+    return images
+
+# Guideline 32
+@app.get('/api/verify/background-image-size')
+def verify_background_image_size(url: str = Query(...)):
+    """List all image URLs from the page (from <img> tags and background-image styles), get their sizes, truncate URLs to 50 chars, and return info."""
+    try:
+        r = requests.get(url, timeout=10)
+        r.raise_for_status()
+        soup = BeautifulSoup(r.text, 'html.parser')
+        results = []
+        seen_urls = set()
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (compatible; ImageSizeBot/1.0)'
+        }
+        # 1. Find all <img> tags
+        for img in soup.find_all('img'):
+            img_url = img.get('src')
+            if img_url:
+                full_url = urljoin(url, img_url)
+                if full_url in seen_urls:
+                    continue
+                seen_urls.add(full_url)
+                try:
+                    resp = requests.head(full_url, headers=headers, timeout=10)
+                    size = int(resp.headers.get('content-length', 0))
+                    # fallback to GET if HEAD fails to provide size
+                    if size == 0:
+                        resp = requests.get(full_url, headers=headers, stream=True, timeout=10)
+                        size = int(resp.headers.get('content-length', 0))
+                    results.append({
+                        'source': 'img_tag',
+                        'image_url': full_url[:70],
+                        'size_bytes': size,
+                        'size_KB': round(size / 1024, 2),
+                        'size_MB': round(size/1024/1024, 2)
+                    })
+                except Exception as e:
+                    results.append({
+                        'source': 'img_tag',
+                        'image_url': full_url[:70],
+                        'error': str(e)
+                    })
+        # 2. Find all background images in style attributes
+        for tag in soup.find_all(style=True):
+            style = tag['style']
+            m = re.search(r'background(-image)?:.*url\(([^)]+)\)', style)
+            if m:
+                img_url = m.group(2).strip('"\'')
+                full_url = urljoin(url, img_url)
+                if full_url in seen_urls:
+                    continue
+                seen_urls.add(full_url)
+                try:
+                    resp = requests.head(full_url, headers=headers, timeout=10)
+                    size = int(resp.headers.get('content-length', 0))
+                    if size == 0:
+                        resp = requests.get(full_url, headers=headers, stream=True, timeout=10)
+                        size = int(resp.headers.get('content-length', 0))
+                    results.append({
+                        'source': 'background_image',
+                        'image_url': full_url[:70],
+                        'size_bytes': size,
+                        'size_KB': round(size / 1024, 2),
+                        'size_MB': round(size/1024/1024, 2)
+                    })
+                except Exception as e:
+                    results.append({
+                        'source': 'background_image',
+                        'image_url': full_url[:70],
+                        'error': str(e)
+                    })
+        return {
+            'success': True,
+            'message': f'Found {len(results)} images on the page.',
+            'details': results,
+            'timestamp': get_timestamp()
+        }
+    except Exception as e:
+        return {'success': False, 'message': str(e), 'timestamp': get_timestamp(), 'details': {}}
+
+# Guideline 33
+@app.get('/api/verify/banner-image-size')
+def verify_banner_image_size(url: str = Query(...)):
+    """Guideline 33: Banner and header images are maximum up to 2MB"""
+    try:
+        r = requests.get(url, timeout=10)
+        r.raise_for_status()
+        soup = BeautifulSoup(r.text, 'html.parser')
+        results = []
+        seen_urls = set()
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (compatible; ImageSizeBot/1.0)'
+        }
+        # 1. Find all <img> tags
+        for img in soup.find_all('img'):
+            img_url = img.get('src')
+            if img_url:
+                full_url = urljoin(url, img_url)
+                if full_url in seen_urls:
+                    continue
+                seen_urls.add(full_url)
+                try:
+                    resp = requests.head(full_url, headers=headers, timeout=10)
+                    size = int(resp.headers.get('content-length', 0))
+                    # fallback to GET if HEAD fails to provide size
+                    if size == 0:
+                        resp = requests.get(full_url, headers=headers, stream=True, timeout=10)
+                        size = int(resp.headers.get('content-length', 0))
+                    results.append({
+                        'source': 'img_tag',
+                        'image_url': full_url[:70],
+                        'size_bytes': size,
+                        'size_KB': round(size / 1024, 2),
+                        'size_MB': round(size/1024/1024, 2)
+                    })
+                except Exception as e:
+                    results.append({
+                        'source': 'img_tag',
+                        'image_url': full_url[:70],
+                        'error': str(e)
+                    })
+        # 2. Find all background images in style attributes
+        for tag in soup.find_all(style=True):
+            style = tag['style']
+            m = re.search(r'background(-image)?:.*url\(([^)]+)\)', style)
+            if m:
+                img_url = m.group(2).strip('"\'')
+                full_url = urljoin(url, img_url)
+                if full_url in seen_urls:
+                    continue
+                seen_urls.add(full_url)
+                try:
+                    resp = requests.head(full_url, headers=headers, timeout=10)
+                    size = int(resp.headers.get('content-length', 0))
+                    if size == 0:
+                        resp = requests.get(full_url, headers=headers, stream=True, timeout=10)
+                        size = int(resp.headers.get('content-length', 0))
+                    results.append({
+                        'source': 'background_image',
+                        'image_url': full_url[:70],
+                        'size_bytes': size,
+                        'size_KB': round(size / 1024, 2),
+                        'size_MB': round(size/1024/1024, 2)
+                    })
+                except Exception as e:
+                    results.append({
+                        'source': 'background_image',
+                        'image_url': full_url[:70],
+                        'error': str(e)
+                    })
+        return {
+            'success': True,
+            'message': f'Found {len(results)} images on the page.',
+            'details': results,
+            'timestamp': get_timestamp()
+        }
+    except Exception as e:
+        return {'success': False, 'message': str(e), 'timestamp': get_timestamp(), 'details': {}}
+
+# Guideline 34
+@app.get('/api/verify/thumbnail-image-size')
+def verify_thumbnail_image_size(url: str = Query(...)):
+    """Guideline 34: Thumbnail images are maximum up to 100 KB"""
+    try:
+        r = requests.get(url, timeout=10)
+        r.raise_for_status()
+        soup = BeautifulSoup(r.text, 'html.parser')
+        results = []
+        seen_urls = set()
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (compatible; ImageSizeBot/1.0)'
+        }
+        # 1. Find all <img> tags
+        for img in soup.find_all('img'):
+            img_url = img.get('src')
+            if img_url:
+                full_url = urljoin(url, img_url)
+                if full_url in seen_urls:
+                    continue
+                seen_urls.add(full_url)
+                try:
+                    resp = requests.head(full_url, headers=headers, timeout=10)
+                    size = int(resp.headers.get('content-length', 0))
+                    # fallback to GET if HEAD fails to provide size
+                    if size == 0:
+                        resp = requests.get(full_url, headers=headers, stream=True, timeout=10)
+                        size = int(resp.headers.get('content-length', 0))
+                    results.append({
+                        'source': 'img_tag',
+                        'image_url': full_url[:70],
+                        'size_bytes': size,
+                        'size_KB': round(size / 1024, 2),
+                        'size_MB': round(size/1024/1024, 2)
+                    })
+                except Exception as e:
+                    results.append({
+                        'source': 'img_tag',
+                        'image_url': full_url[:70],
+                        'error': str(e)
+                    })
+        # 2. Find all background images in style attributes
+        for tag in soup.find_all(style=True):
+            style = tag['style']
+            m = re.search(r'background(-image)?:.*url\(([^)]+)\)', style)
+            if m:
+                img_url = m.group(2).strip('"\'')
+                full_url = urljoin(url, img_url)
+                if full_url in seen_urls:
+                    continue
+                seen_urls.add(full_url)
+                try:
+                    resp = requests.head(full_url, headers=headers, timeout=10)
+                    size = int(resp.headers.get('content-length', 0))
+                    if size == 0:
+                        resp = requests.get(full_url, headers=headers, stream=True, timeout=10)
+                        size = int(resp.headers.get('content-length', 0))
+                    results.append({
+                        'source': 'background_image',
+                        'image_url': full_url[:70],
+                        'size_bytes': size,
+                        'size_KB': round(size / 1024, 2),
+                        'size_MB': round(size/1024/1024, 2)
+                    })
+                except Exception as e:
+                    results.append({
+                        'source': 'background_image',
+                        'image_url': full_url[:70],
+                        'error': str(e)
+                    })
+        return {
+            'success': True,
+            'message': f'Found {len(results)} images on the page.',
+            'details': results,
+            'timestamp': get_timestamp()
+        }
+    except Exception as e:
+        return {'success': False, 'message': str(e), 'timestamp': get_timestamp(), 'details': {}}
+
+
+
+from collections import defaultdict
+# Guideline 35
+@app.get('/api/verify/image-format')
+def verify_image_format(url: str = Query(...)):
+    """Guideline 35: All images are in JPEG, PNG or WEBP format only"""
+    try:
+        # Step 1: Get page HTML
+        r = requests.get(url, timeout=10)
+        r.raise_for_status()
+
+        # Step 2: Extract images from HTML
+        images = get_images_from_html(r.text, url)
+        allowed_ext = ['.jpg', '.jpeg', '.png', '.webp']
+        results = []
+        success = True
+        format_counts = defaultdict(int)
+
+        for img in images:
+            src = img['src']
+            ext = Path(urlparse(src).path).suffix.lower()
+
+            # Step 3: Fallback - use Content-Type header if extension is missing
+            if not ext:
+                try:
+                    head = requests.head(src, timeout=5)
+                    content_type = head.headers.get("Content-Type", "")
+                    ext = {
+                        'image/jpeg': '.jpg',
+                        'image/png': '.png',
+                        'image/webp': '.webp'
+                    }.get(content_type, '')
+                except:
+                    ext = ''
+
+            # Step 4: Format check and results logging
+            ok = ext in allowed_ext
+            format_key = ext or 'unknown'
+            format_counts[format_key] += 1
+
+            results.append({
+                'img_url': src,
+                'format': format_key,
+                'allowed': ok
+            })
+
+            if not ok:
+                success = False
+
+        return {
+            'success': success,
+            'message': 'All images are JPEG, PNG, or WEBP' if success else 'Some images are not JPEG, PNG, or WEBP',
+            'details': results,
+            'format_summary': dict(format_counts),
+            'timestamp': get_timestamp()
+        }
+
+    except Exception as e:
+        return {
+            'success': False,
+            'message': str(e),
+            'timestamp': get_timestamp(),
+            'details': {},
+            'format_summary': {}
+        }
+
+# Guideline 36
+@app.get('/api/verify/high-res-image')
+def verify_high_res_image(url: str = Query(...)):
+    """Guideline 36: High resolution images are maximum up to 5 MB"""
+    try:
+        r = requests.get(url, timeout=10)
+        r.raise_for_status()
+        soup = BeautifulSoup(r.text, 'html.parser')
+        results = []
+        seen_urls = set()
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (compatible; ImageSizeBot/1.0)'
+        }
+        any_oversized = False  # Track oversized image
+
+        # 1. Find all <img> tags
+        for img in soup.find_all('img'):
+            img_url = img.get('src')
+            if img_url:
+                full_url = urljoin(url, img_url)
+                if full_url in seen_urls:
+                    continue
+                seen_urls.add(full_url)
+                try:
+                    resp = requests.head(full_url, headers=headers, timeout=10)
+                    size = int(resp.headers.get('content-length', 0))
+                    if size == 0:
+                        resp = requests.get(full_url, headers=headers, stream=True, timeout=10)
+                        size = int(resp.headers.get('content-length', 0))
+
+                    size_MB = round(size / 1024 / 1024, 2)
+                    if size_MB > 5:
+                        any_oversized = True
+
+                    results.append({
+                        'source': 'img_tag',
+                        'image_url': full_url[:70],
+                        'size_bytes': size,
+                        'size_KB': round(size / 1024, 2),
+                        'size_MB': size_MB
+                    })
+                except Exception as e:
+                    results.append({
+                        'source': 'img_tag',
+                        'image_url': full_url[:70],
+                        'error': str(e)
+                    })
+
+        # 2. Find all background images in style attributes
+        for tag in soup.find_all(style=True):
+            style = tag['style']
+            m = re.search(r'background(-image)?:.*url\(([^)]+)\)', style)
+            if m:
+                img_url = m.group(2).strip('"\'')
+                full_url = urljoin(url, img_url)
+                if full_url in seen_urls:
+                    continue
+                seen_urls.add(full_url)
+                try:
+                    resp = requests.head(full_url, headers=headers, timeout=10)
+                    size = int(resp.headers.get('content-length', 0))
+                    if size == 0:
+                        resp = requests.get(full_url, headers=headers, stream=True, timeout=10)
+                        size = int(resp.headers.get('content-length', 0))
+
+                    size_MB = round(size / 1024 / 1024, 2)
+                    if size_MB > 5:
+                        any_oversized = True
+
+                    results.append({
+                        'source': 'background_image',
+                        'image_url': full_url[:70],
+                        'size_bytes': size,
+                        'size_KB': round(size / 1024, 2),
+                        'size_MB': size_MB
+                    })
+                except Exception as e:
+                    results.append({
+                        'source': 'background_image',
+                        'image_url': full_url[:70],
+                        'error': str(e)
+                    })
+
+        return {
+            'success': not any_oversized,  # Will be False if any image > 5MB
+            'message': f'Found {len(results)} images on the page.',
+            'details': results,
+            'timestamp': get_timestamp()
+        }
+    except Exception as e:
+        return {
+            'success': False,
+            'message': str(e),
+            'timestamp': get_timestamp(),
+            'details': {}
+        }
+# Guideline 37
+@app.get('/api/verify/alt-text')
+def verify_alt_text(url: str = Query(...)):
+    """Guideline 37: Alternative text is provided for all images"""
+    try:
+        r = requests.get(url, timeout=10)
+        r.raise_for_status()
+        images = get_images_from_html(r.text, url)
+        results = []
+        success = True
+        for img in images:
+            has_alt = bool(img['alt'].strip())
+            results.append({'img_url': img['src'], 'alt': img['alt'], 'has_alt': has_alt})
+            if not has_alt:
+                success = False
+        return {
+            'success': success,
+            'message': 'All images have alt text' if success else 'Some images are missing alt text',
+            'total_images': len(images),
+            'details': results,
+            'timestamp': get_timestamp()
+        }
+    except Exception as e:
+        return {'success': False, 'message': str(e), 'timestamp': get_timestamp(), 'details': {}}
+
+# Guideline 38:
+@app.get('/api/verify/alt-text-length')
+def verify_alt_text_length(url: str = Query(...)):
+    """Guideline 38: Alternative text is maximum up to 100 characters"""
+    try:
+        r = requests.get(url, timeout=10)
+        r.raise_for_status()
+        images = get_images_from_html(r.text, url)
+        results = []
+        success = True
+        for img in images:
+            alt_len = len(img['alt'])
+            ok = alt_len <= 100
+            results.append({'img_url': img['src'], 'alt': img['alt'], 'alt_length': alt_len, 'under_100_chars': ok})
+            if not ok:
+                success = False
+        return {
+            'success': success,
+            'message': 'All alt texts are <= 100 characters' if success else 'Some alt texts exceed 100 characters',
+            'total_images': len(images),
+            'details': results,
+            'timestamp': get_timestamp()
+        }
+    except Exception as e:
+        return {'success': False, 'message': str(e), 'timestamp': get_timestamp(), 'details': {}}
+
+
 #testcase_20
 from playwright.async_api import async_playwright
 import os

@@ -81,6 +81,14 @@ function App() {
   
   // State for test case 20 (Typography - Noto Sans)
   const [url20, setUrl20] = useState('');
+  // States for guidelines 32-38 (Image related test cases)
+  const [url32, setUrl32] = useState('');
+  const [url33, setUrl33] = useState('');
+  const [url34, setUrl34] = useState('');
+  const [url35, setUrl35] = useState('');
+  const [url36, setUrl36] = useState('');
+  const [url37, setUrl37] = useState('');
+  const [url38, setUrl38] = useState('');
   // States for guidelines 54-65
   const [url54, setUrl54] = useState('');
   const [url55, setUrl55] = useState('');
@@ -110,6 +118,13 @@ function App() {
     11: '/api/verify/primary-backgrounds',
     12: '/api/verify/state-emblem-usage',
     20: '/api/verify/noto-sans',
+    32: '/api/verify/background-image-size',
+    33: '/api/verify/banner-image-size',
+    34: '/api/verify/thumbnail-image-size',
+    35: '/api/verify/image-format',
+    36: '/api/verify/high-res-image',
+    37: '/api/verify/alt-text',
+    38: '/api/verify/alt-text-length',
     54: '/api/verify/server-response-time',
     55: '/api/verify/browser-caching',
     56: '/api/verify/image-optimization',
@@ -198,10 +213,11 @@ function App() {
       await handleNotoSansVerify();
       return;
     }
-    // Guidelines 54-65
-    if (testCaseId >= 54 && testCaseId <= 65) {
+    // Guidelines 32-38 and 54-65
+    if ((testCaseId >= 32 && testCaseId <= 38) || (testCaseId >= 54 && testCaseId <= 65)) {
       // Use the corresponding url state
       const urlStates = {
+        32: url32, 33: url33, 34: url34, 35: url35, 36: url36, 37: url37, 38: url38,
         54: url54, 55: url55, 56: url56, 57: url57, 58: url58, 59: url59,
         60: url60, 61: url61, 62: url62, 63: url63, 64: url64, 65: url65
       };
@@ -660,6 +676,13 @@ function App() {
                                    (testCase.id === 11 && !url11) ||
                                    (testCase.id === 12 && !screenshot12) ||
                                    (testCase.id === 20 && !url20) ||
+                                   (testCase.id === 32 && !url32) ||
+                                   (testCase.id === 33 && !url33) ||
+                                   (testCase.id === 34 && !url34) ||
+                                   (testCase.id === 35 && !url35) ||
+                                   (testCase.id === 36 && !url36) ||
+                                   (testCase.id === 37 && !url37) ||
+                                   (testCase.id === 38 && !url38) ||
                                    (testCase.id === 54 && !url54) ||
                                    (testCase.id === 55 && !url55) ||
                                    (testCase.id === 56 && !url56) ||
@@ -765,13 +788,20 @@ function App() {
                                   />
                                 </div>
                               )}
-                              {(testCase.id >= 54 && testCase.id <= 65) && (
+                              {((testCase.id >= 32 && testCase.id <= 38) || (testCase.id >= 54 && testCase.id <= 65)) && (
                                 <div className="url-input-wrapper" style={{ width: '100%', marginBottom: 8 }}>
                                   <input
                                     type="url"
                                     id={`url-input-${testCase.id}`}
                                     className="url-input"
                                     value={
+                                      testCase.id === 32 ? url32 :
+                                      testCase.id === 33 ? url33 :
+                                      testCase.id === 34 ? url34 :
+                                      testCase.id === 35 ? url35 :
+                                      testCase.id === 36 ? url36 :
+                                      testCase.id === 37 ? url37 :
+                                      testCase.id === 38 ? url38 :
                                       testCase.id === 54 ? url54 :
                                       testCase.id === 55 ? url55 :
                                       testCase.id === 56 ? url56 :
@@ -787,7 +817,14 @@ function App() {
                                     }
                                     onChange={e => {
                                       const val = e.target.value;
-                                      if (testCase.id === 54) setUrl54(val);
+                                      if (testCase.id === 32) setUrl32(val);
+                                      else if (testCase.id === 33) setUrl33(val);
+                                      else if (testCase.id === 34) setUrl34(val);
+                                      else if (testCase.id === 35) setUrl35(val);
+                                      else if (testCase.id === 36) setUrl36(val);
+                                      else if (testCase.id === 37) setUrl37(val);
+                                      else if (testCase.id === 38) setUrl38(val);
+                                      else if (testCase.id === 54) setUrl54(val);
                                       else if (testCase.id === 55) setUrl55(val);
                                       else if (testCase.id === 56) setUrl56(val);
                                       else if (testCase.id === 57) setUrl57(val);
